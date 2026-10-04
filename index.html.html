@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Lesson: to be, countries & months</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --bg: #f7f9fc;
+            --text: #333;
+            --border: #d1d9e6;
+            --highlight: #e8f0fe;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 15px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h2:first-child { margin-top: 0; }
+        
+        /* Grammar Table */
+        .grammar-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .grammar-table th, .grammar-table td {
+            border: 1px solid var(--border);
+            padding: 10px;
+            text-align: left;
+        }
+        .grammar-table th {
+            background-color: var(--highlight);
+            text-align: center;
+        }
+        .blue-text { color: var(--primary); font-weight: bold; }
+        
+        /* Exercise 1: Options */
+        .ex-sentence {
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+        }
+        .option {
+            display: inline-block;
+            padding: 2px 8px;
+            margin: 0 2px;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            cursor: pointer;
+            background: #fff;
+            transition: 0.2s;
+        }
+        .option.selected {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* Exercise 2: Mistakes */
+        .mistake-text {
+            font-size: 1.1rem;
+            line-height: 2;
+            padding: 15px;
+            background: var(--highlight);
+            border-radius: 8px;
+        }
+        .word {
+            cursor: pointer;
+            border-bottom: 1px dashed #999;
+            transition: 0.2s;
+        }
+        .word:hover {
+            background-color: #ffe0e0;
+        }
+        .word.marked {
+            color: #d93025;
+            font-weight: bold;
+            border-bottom: none;
+        }
+        .correction-input {
+            width: 80px;
+            margin: 0 5px;
+            padding: 2px 5px;
+            border: 1px solid #d93025;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            color: #d93025;
+            outline: none;
+        }
+
+        /* Exercise 3: Table inputs */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px dashed var(--primary);
+            border-radius: 8px;
+            justify-content: center;
+        }
+        .word-tag {
+            background: #fff;
+            border: 1px solid var(--primary);
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+        .input-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .input-table th, .input-table td {
+            border: 1px solid var(--border);
+            padding: 5px;
+            text-align: center;
+        }
+        .input-table th { background: var(--highlight); }
+        .input-table input {
+            width: 90%;
+            padding: 8px;
+            border: none;
+            border-bottom: 1px solid #ccc;
+            text-align: center;
+            font-size: 1rem;
+            outline: none;
+        }
+        .input-table input:focus { border-bottom: 2px solid var(--primary); }
+
+        /* Exercise 4: Inline inputs */
+        .inline-input {
+            width: 100px;
+            padding: 4px 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+            text-align: center;
+            outline: none;
+            margin: 0 3px;
+        }
+        .inline-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+        
+        /* Style for hints with flags */
+        .hint {
+            font-size: 0.9rem;
+            color: #777;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 480px) {
+            .input-table input { font-size: 0.9rem; padding: 5px; }
+            .option { padding: 4px 10px; }
+            .inline-input { width: 80px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- Grammar Table -->
+    <h2>Grammar: to be</h2>
+    <table class="grammar-table">
+        <tr>
+            <th>+</th>
+            <th>-</th>
+        </tr>
+        <tr>
+            <td>I<span class="blue-text">'m</span> from Wales.</td>
+            <td>I<span class="blue-text">'m not</span> from England.</td>
+        </tr>
+        <tr>
+            <td>You<span class="blue-text">'re</span> Spanish.</td>
+            <td>You <span class="blue-text">aren't</span> Italian.</td>
+        </tr>
+        <tr>
+            <td>He/She/It<span class="blue-text">'s</span> ten.</td>
+            <td>He/She/It <span class="blue-text">isn't</span> thirteen.</td>
+        </tr>
+        <tr>
+            <td>We/You/They<span class="blue-text">'re</span> friends.</td>
+            <td>We/You/They <span class="blue-text">aren't</span> friends.</td>
+        </tr>
+        <tr>
+            <th>?</th>
+            <th>Short answers</th>
+        </tr>
+        <tr>
+            <td><span class="blue-text">Are</span> you from Wales?</td>
+            <td>Yes, I <span class="blue-text">am</span>. / No, I<span class="blue-text">'m not</span>.</td>
+        </tr>
+        <tr>
+            <td><span class="blue-text">Is</span> he twelve?</td>
+            <td>Yes, he <span class="blue-text">is</span>. / No, he <span class="blue-text">isn't</span>.</td>
+        </tr>
+        <tr>
+            <td><span class="blue-text">Are</span> they brothers?</td>
+            <td>Yes, they <span class="blue-text">are</span>. / No, they <span class="blue-text">aren't</span>.</td>
+        </tr>
+    </table>
+
+    <!-- Exercise 1 -->
+    <h2>1. Circle the correct answer.</h2>
+    <div class="ex-sentence">1. Amy <span class="option">isn't</span> / <span class="option">aren't</span> eleven. She <span class="option">'s</span> / <span class="option">'re</span> twelve.</div>
+    <div class="ex-sentence">2. A: <span class="option">Are</span> / <span class="option">Is</span> you from Wales?<br>B: Yes, I <span class="option">am</span> / <span class="option">are</span>.</div>
+    <div class="ex-sentence">3. We <span class="option">am not</span> / <span class="option">aren't</span> sisters. We <span class="option">'s</span> / <span class="option">'re</span> friends.</div>
+    <div class="ex-sentence">4. A: <span class="option">Is</span> / <span class="option">Are</span> they Italian?<br>B: No, they <span class="option">isn't</span> / <span class="option">aren't</span>.</div>
+
+    <!-- Exercise 2 -->
+    <h2>2. Read the post. Find and correct 6 mistakes.</h2>
+    <p><i>Натисни на слово з помилкою, щоб виправити його.</i></p>
+    <div class="mistake-text" id="mistake-container">
+        "Hi! My name am Leo. I is twelve years old. My friend Sofia and I am in London, but we isn't British. Sofia are Italian. She is from Rome. My birthday is in November, and Sofia's birthday is in May. When are your birthday?"
+    </div>
+
+    <!-- Exercise 3 -->
+    <h2>3. Complete the table with the words.</h2>
+    <div class="word-bank">
+        <span class="word-tag">Argentinian</span>
+        <span class="word-tag">August</span>
+        <span class="word-tag">Chinese</span>
+        <span class="word-tag">France</span>
+        <span class="word-tag">Germany</span>
+        <span class="word-tag">Italian</span>
+        <span class="word-tag">July</span>
+        <span class="word-tag">September</span>
+        <span class="word-tag">Turkey</span>
+    </div>
+    <table class="input-table">
+        <tr>
+            <th>Countries</th>
+            <th>Nationalities</th>
+            <th>Months</th>
+        </tr>
+        <tr>
+            <td><input type="text"></td>
+            <td><input type="text" value="Argentinian"></td>
+            <td><input type="text"></td>
+        </tr>
+        <tr>
+            <td><input type="text"></td>
+            <td><input type="text"></td>
+            <td><input type="text"></td>
+        </tr>
+        <tr>
+            <td><input type="text"></td>
+            <td><input type="text"></td>
+            <td><input type="text"></td>
+        </tr>
+        <tr>
+            <td><input type="text"></td>
+            <td><input type="text"></td>
+            <td><input type="text"></td>
+        </tr>
+    </table>
+
+    <!-- Exercise 4 -->
+    <h2>4. Complete the sentences.</h2>
+    <p>
+        1. Lin <input type="text" class="inline-input"> (not) from Spain. She is from <input type="text" class="inline-input"> <span class="hint">(🇨🇳)</span>. She is <input type="text" class="inline-input"> <span class="hint">(🇨🇳 nationality)</span>.
+    </p>
+    <p>
+        2. Pedro and Maria <input type="text" class="inline-input"> from <input type="text" class="inline-input"> <span class="hint">(🇦🇷)</span>. Their birthday is in the 8th month of the year. It <input type="text" class="inline-input"> in <input type="text" class="inline-input">.
+    </p>
+    <p>
+        3. Hans is <input type="text" class="inline-input"> <span class="hint">(🇩🇪 nationality)</span>. His birthday is the month after May. It is in <input type="text" class="inline-input">.
+    </p>
+    <p>
+        4. My name <input type="text" class="inline-input"> Oliver. I <input type="text" class="inline-input"> from the UK, so I am <input type="text" class="inline-input"> <span class="hint">(🇬🇧 nationality)</span>. My birthday is in the first month of the year. It <input type="text" class="inline-input"> in <input type="text" class="inline-input">.
+    </p>
+
+</div>
+
+<script>
+    // Logic for Exercise 1: selecting options
+    document.querySelectorAll('.ex-sentence').forEach(sentence => {
+        let options = sentence.querySelectorAll('.option');
+        options.forEach(opt => {
+            opt.addEventListener('click', function() {
+                if(this.classList.contains('selected')) {
+                    this.classList.remove('selected');
+                } else {
+                    this.classList.add('selected');
+                }
+            });
+        });
+    });
+
+    // Logic for Exercise 2: click words to correct
+    const container = document.getElementById('mistake-container');
+    const text = container.innerHTML;
+    const wrappedText = text.replace(/\b([a-zA-Z']+)\b/g, '<span class="word">$1</span>');
+    container.innerHTML = wrappedText;
+
+    document.querySelectorAll('.word').forEach(wordSpan => {
+        wordSpan.addEventListener('click', function() {
+            if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('correction-input')) {
+                this.classList.add('marked');
+                
+                let input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'correction-input';
+                input.placeholder = '...';
+                
+                this.parentNode.insertBefore(input, this.nextSibling);
+                input.focus();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
