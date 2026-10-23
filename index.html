@@ -176,10 +176,22 @@
             .inline-input { width: 80px; }
         }
     </style>
+<script id="app-config" type="application/json">{"scriptUrl": "https://script.google.com/macros/s/AKfycbyrAXfjLxtVdM6uTjrLmOKCUyuo4Pganxyv11FW1lb9a_a2QFE31gardbLS9iVG1gaw/exec"}</script>
 </head>
 <body>
 
 <div class="container">
+    <aside style="background:#e8f0fe;padding:12px;border-radius:8px;margin-bottom:20px;font-size:.9rem">
+      <div id="sync-status" role="status" aria-live="polite">Підключення…</div>
+      <small>Спільні відповіді: зміни доступні всім відвідувачам.</small>
+      <details id="connection-settings" hidden>
+        <summary>Підключити Google Sheets</summary>
+        <p>Спочатку виконайте інструкцію з комплекту, потім вставте адресу розгорнутого Apps Script (із закінченням /exec).</p>
+        <label>Адреса Apps Script <input id="script-url" type="url" style="box-sizing:border-box;width:100%;padding:8px" placeholder="https://script.google.com/macros/s/…/exec"></label>
+        <button type="button" id="download-configured" style="margin-top:10px;padding:8px">Завантажити налаштований HTML</button>
+        <p id="config-feedback" role="status"></p>
+      </details>
+    </aside>
     
     <!-- Grammar Table -->
     <h2>Grammar: to be</h2>
@@ -295,41 +307,164 @@
 </div>
 
 <script>
-    // Logic for Exercise 1: selecting options
-    document.querySelectorAll('.ex-sentence').forEach(sentence => {
-        let options = sentence.querySelectorAll('.option');
-        options.forEach(opt => {
-            opt.addEventListener('click', function() {
-                if(this.classList.contains('selected')) {
-                    this.classList.remove('selected');
-                } else {
-                    this.classList.add('selected');
-                }
-            });
-        });
-    });
+(() => {
+'use strict';
+const originalHTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+const config = JSON.parse(document.getElementById('app-config').textContent);
+const status = document.getElementById('sync-status');
+const settings = document.getElementById('connection-settings');
+const fields = new Map();
+const pending = new Map();
+let generation = 0, saving = false, reading = false, loaded = false, storageOK = true;
+let bridge = null, bridgeOrigin = '', nextId = 0, timer;
+const calls = new Map();
+const token = crypto.randomUUID();
+const storageKey = 'lesson-shared-pending-v1:' + config.scriptUrl;
+const validUrl = value => /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(value);
+const say = text => { status.textContent = text; };
+const container = document.getElementById('mistake-container');
+container.innerHTML = container.innerHTML.replace(/\b([a-zA-Z']+)\b/g, '<span class="word">$1</span>');
+const words = [...container.querySelectorAll('.word')];
+function correction(index) {
+ const word = words[index];
+ let input = word.nextElementSibling;
+ if (!input || !input.classList.contains('correction-input')) {
+   input = document.createElement('input'); input.type = 'text'; input.maxLength = 500;
+   input.className = 'correction-input'; input.placeholder = '...';
+   input.setAttribute('aria-label', 'Виправлення: ' + word.textContent);
+   input.dataset.key = 'correction-' + index;
+   word.after(input); fields.set(input.dataset.key, input);
+ }
+ word.classList.add('marked'); return input;
+}
+document.querySelectorAll('.input-table input, .inline-input').forEach((input,index) => {
+ input.dataset.key = 'input-' + index; input.maxLength = 500; fields.set(input.dataset.key,input);
+});
+document.querySelectorAll('.option').forEach((option,index) => {
+ const key = 'option-' + index; option.dataset.key = key;
+ option.tabIndex = 0; option.setAttribute('role','button'); option.setAttribute('aria-pressed','false');
+ fields.set(key,option);
+ const toggle = () => {
+   option.classList.toggle('selected');
+   const value = String(option.classList.contains('selected')); option.setAttribute('aria-pressed',value); edit(key,value);
+ };
+ option.addEventListener('click',toggle);
+ option.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+});
+words.forEach((word,index) => {
+ word.tabIndex=0; word.setAttribute('role','button');
+ const open = () => {
+   const existed = fields.has('correction-' + index); const input = correction(index);
+   if (!existed) edit(input.dataset.key,''); input.focus();
+ };
+ word.addEventListener('click',open);
+ word.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+});
+function apply(key,value) {
+ if(typeof value !== 'string' || value.length > 500) return;
+ const match = /^correction-(\d+)$/.exec(key);
+ if(match && +match[1] < words.length) correction(+match[1]);
+ const element = fields.get(key); if(!element) return;
+ if(key.startsWith('option-')) {
+   element.classList.toggle('selected',value==='true'); element.setAttribute('aria-pressed',String(value==='true'));
+ } else if(element.value !== value) element.value = value;
+}
+function persist() {
+ try { localStorage.setItem(storageKey,JSON.stringify([...pending])); storageOK=true; }
+ catch (_) { storageOK=false; }
+}
+function edit(key,value) {
+ pending.set(key,value); generation++; persist();
+ say(validUrl(config.scriptUrl) ? 'Є зміни, очікуємо збереження…' : 'Хмару не підключено. Відповіді ще не доступні іншим.');
+ clearTimeout(timer); timer=setTimeout(flush,600);
+}
+document.addEventListener('input',e=>{if(e.target.dataset.key)edit(e.target.dataset.key,e.target.value);});
+try {
+ const saved = JSON.parse(localStorage.getItem(storageKey)||'[]');
+ if(Array.isArray(saved)) saved.forEach(pair=>{
+   if(Array.isArray(pair)&&pair.length===2&&typeof pair[0]==='string'&&typeof pair[1]==='string') {
+     apply(pair[0],pair[1]); if(fields.has(pair[0]))pending.set(pair[0],pair[1]);
+   }
+ });
+} catch (_) { storageOK=false; }
+function rpc(action,changes) {
+ return new Promise((resolve,reject)=>{
+   if(!bridge) return reject(new Error('Немає з’єднання з Google.'));
+   const id=String(++nextId);
+   const timeout=setTimeout(()=>{calls.delete(id);reject(new Error('Google не відповідає.'));},30000);
+   calls.set(id,{resolve,reject,timeout});
+   bridge.postMessage({channel:'lesson-sheets',token,id,action,changes},bridgeOrigin);
+ });
+}
+async function refresh() {
+ if(reading || saving || !bridge || document.hidden) return;
+ reading=true; const before=generation;
+ try {
+   const data=await rpc('read');
+   if(before!==generation || saving) return;
+   Object.entries(data||{}).forEach(([key,value])=>{
+     if(!pending.has(key) && fields.get(key)!==document.activeElement)apply(key,value);
+   });
+   loaded=true;
+   if(!pending.size)say('✓ Спільні відповіді завантажено');
+ } catch (_) { say('Немає зв’язку з Google. Повторимо підключення автоматично.'); }
+ finally { reading=false; if(loaded && pending.size)flush(); }
+}
+async function flush() {
+ if(saving || !bridge || !loaded || !pending.size)return;
+ saving=true; generation++;
+ const batch=[...pending].map(([key,value])=>({key,value}));
+ say('Зберігаємо…'); let success=false;
+ try {
+   const result=await rpc('save',batch);
+   if(!result || !result.ok)throw new Error('Збереження не підтверджено.');
+   batch.forEach(({key,value})=>{if(pending.get(key)===value)pending.delete(key);});
+   persist(); success=true;
+   say(pending.size?'Зберігаємо наступні зміни…':'✓ Усі зміни збережено для всіх');
+ } catch (_) {
+   say(storageOK?'Не збережено в Google. Черга збережена на цьому пристрої; повторимо автоматично.':'Не збережено. Не закривайте вкладку до відновлення зв’язку.');
+ } finally {
+   saving=false;
+   if(success && pending.size){clearTimeout(timer);timer=setTimeout(flush,100);}
+ }
+}
+window.addEventListener('message',event=>{
+ const m=event.data;
+ if(!m || m.channel!=='lesson-sheets'||m.token!==token)return;
+ let host; try {host=new URL(event.origin).hostname;} catch(_){return;}
+ if(new URL(event.origin).protocol!=='https:' || !(host.endsWith('.googleusercontent.com')||host==='script.google.com'))return;
+ if(m.ready && !bridge){bridge=event.source;bridgeOrigin=event.origin;say('Завантажуємо спільні відповіді…');refresh();return;}
+ if(event.source!==bridge||event.origin!==bridgeOrigin)return;
+ const call=calls.get(m.id);if(!call)return;
+ clearTimeout(call.timeout);calls.delete(m.id);
+ if(m.error)call.reject(new Error(m.error));else call.resolve(m.data);
+});
+if(validUrl(config.scriptUrl)) {
+ const frame=document.createElement('iframe'); frame.title='З’єднання зі спільними відповідями'; frame.hidden=true;
+ frame.src=config.scriptUrl+'?token='+encodeURIComponent(token)+'&origin='+encodeURIComponent(location.origin);
+ document.body.append(frame);
+ setTimeout(()=>{if(!bridge)say('Google не підключився. Перевірте адресу /exec і доступ «Усі / Anyone» у розгортанні Apps Script.');},30000);
+ setInterval(()=>{if(!document.hidden){if(pending.size&&loaded)flush();else refresh();}},10000);
+ window.addEventListener('online',()=>{if(loaded)flush();else refresh();});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(pending.size&&loaded)flush();else refresh();}});
+ document.addEventListener('focusout',()=>{if(!pending.size)setTimeout(refresh,0);});
+} else {
+ say('Спільне збереження ще не підключено.'); settings.hidden=false;settings.open=true;
+}
+window.addEventListener('beforeunload',e=>{if(pending.size){e.preventDefault();e.returnValue='';}});
+document.getElementById('download-configured').addEventListener('click',()=>{
+ const url=document.getElementById('script-url').value.trim();
+ const feedback=document.getElementById('config-feedback');
+ if(!validUrl(url)){feedback.textContent='Вставте адресу https://script.google.com/macros/s/…/exec';return;}
+ const html=originalHTML.replace(/(<script id="app-config" type="application\/json">)[\s\S]*?(<\/script>)/,
+   (_,start,end)=>start+JSON.stringify({scriptUrl:url})+end);
+ const blobUrl=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+ const a=document.createElement('a');a.href=blobUrl;a.download='English_Lesson_shared.html';a.click();
+ setTimeout(()=>URL.revokeObjectURL(blobUrl),1000);
+ feedback.textContent='Завантажений файл уже містить адресу. Замініть ним HTML у GitHub, зберігши стару назву файлу. Після публікації перевірте збереження у двох браузерах.';
+});
+})();
 
-    // Logic for Exercise 2: click words to correct
-    const container = document.getElementById('mistake-container');
-    const text = container.innerHTML;
-    const wrappedText = text.replace(/\b([a-zA-Z']+)\b/g, '<span class="word">$1</span>');
-    container.innerHTML = wrappedText;
-
-    document.querySelectorAll('.word').forEach(wordSpan => {
-        wordSpan.addEventListener('click', function() {
-            if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('correction-input')) {
-                this.classList.add('marked');
-                
-                let input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'correction-input';
-                input.placeholder = '...';
-                
-                this.parentNode.insertBefore(input, this.nextSibling);
-                input.focus();
-            }
-        });
-    });
 </script>
 
 </body>
